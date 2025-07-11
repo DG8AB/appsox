@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Host New Project</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>Host New Project 🚀</h1>
+        <a href="/" class="button secondary-button">View Hosted Projects</a>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="flash-messages">
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }}">{{ message }}</div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+
+        <form action="/host" method="post" enctype="multipart/form-data" class="host-form">
+            <div class="form-group">
+                <label for="project_name">Project Name:</label>
+                <input type="text" id="project_name" name="project_name" required placeholder="e.g., my-simple-website">
+            </div>
+
+            <div class="form-group">
+                <label for="project_files">Select Project Files:</label>
+                <input type="file" id="project_files" name="project_files" multiple required>
+                <small>Select all files for your project (HTML, CSS, JS, etc.).</small>
+            </div>
+
+            <div class="form-group">
+                <label for="pre_build_command">Pre-Build Command (Optional):</label>
+                <input type="text" id="pre_build_command" name="pre_build_command" placeholder="e.g., npm install">
+                <small>Command to run before building (e.g., install dependencies).</small>
+            </div>
+
+            <div class="form-group">
+                <label for="build_command">Build Command:</label>
+                <input type="text" id="build_command" name="build_command" required placeholder="e.g., npm run build or cp index.html public/">
+                <small>Command to build your project (e.g., compile code, move files).</small>
+            </div>
+
+            <div class="form-group">
+                <label for="start_command">Start Command:</label>
+                <input type="text" id="start_command" name="start_command" required placeholder="e.g., python app.py or node server.js or serve -p 8080">
+                <small>Command to start your web server or application.</small>
+            </div>
+
+            <button type="submit" class="button submit-button">Deploy Project</button>
+        </form>
+    </div>
+</body>
+</html>
