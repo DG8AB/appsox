@@ -4,7 +4,144 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Host New Project</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #0d0d0d;
+            color: #00ff00;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        .container {
+            max-width: 800px;
+            margin: 30px auto;
+            background: #1a1a1a;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 0 25px rgba(0, 255, 0, 0.4);
+            border: 1px solid #00ff00;
+        }
+        h1 {
+            color: #00ff00;
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+            text-shadow: 0 0 10px rgba(0, 255, 0, 0.7);
+        }
+        .button {
+            display: inline-block;
+            padding: 12px 25px;
+            border-radius: 25px;
+            text-decoration: none;
+            font-weight: bold;
+            transition: background-color 0.3s ease, box-shadow 0.3s ease;
+            text-align: center;
+            margin-bottom: 20px;
+            border: 2px solid #00ff00;
+            cursor: pointer;
+        }
+        .primary-button {
+            background-color: #004d00;
+            color: #00ff00;
+            box-shadow: 0 0 15px rgba(0, 255, 0, 0.5);
+        }
+        .primary-button:hover {
+            background-color: #006600;
+            box-shadow: 0 0 25px rgba(0, 255, 0, 0.7);
+        }
+        .secondary-button {
+            background-color: #333;
+            color: #00ff00;
+            margin-right: 15px;
+            box-shadow: 0 0 10px rgba(0, 255, 0, 0.3);
+        }
+        .secondary-button:hover {
+            background-color: #555;
+            box-shadow: 0 0 20px rgba(0, 255, 0, 0.5);
+        }
+        .submit-button {
+            background-color: #004d00; /* Darker neon green for submit */
+            color: #00ff00;
+            width: 100%;
+            border: 2px solid #00ff00;
+            cursor: pointer;
+            font-size: 1.2em;
+            padding: 12px 0;
+            box-shadow: 0 0 15px rgba(0, 255, 0, 0.5);
+            margin-top: 20px;
+        }
+        .submit-button:hover {
+            background-color: #006600;
+            box-shadow: 0 0 25px rgba(0, 255, 0, 0.7);
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: #aaffaa;
+            font-size: 1.1em;
+        }
+        .form-group input[type="text"],
+        .form-group input[type="file"] {
+            width: calc(100% - 24px); /* Account for padding and border */
+            padding: 12px;
+            border: 1px solid #00ff00; /* Neon border */
+            border-radius: 8px; /* Slightly rounded for inputs */
+            box-sizing: border-box;
+            background-color: #2a2a2a; /* Dark background for inputs */
+            color: #00ff00; /* Neon text for input */
+            outline: none; /* Remove default outline */
+            box-shadow: 0 0 10px rgba(0, 255, 0, 0.2); /* Subtle glow */
+        }
+        .form-group input[type="file"] {
+            padding: 10px;
+        }
+        .form-group input[type="text"]::placeholder {
+            color: #00cc00; /* Lighter neon for placeholder */
+            opacity: 0.7;
+        }
+        .form-group small {
+            display: block;
+            color: #77bb77; /* Softer green for small text */
+            margin-top: 8px;
+            font-size: 0.9em;
+        }
+        .flash-messages {
+            margin-top: 25px;
+            padding: 15px 20px;
+            border-radius: 10px;
+            font-weight: bold;
+            text-align: center;
+            margin-bottom: 25px;
+            border: 1px solid;
+            box-shadow: 0 0 10px rgba(0, 255, 0, 0.3);
+        }
+        .alert-success {
+            background-color: #003300;
+            color: #00ff00;
+            border-color: #00ff00;
+        }
+        .alert-error {
+            background-color: #330000;
+            color: #ff3333;
+            border-color: #ff3333;
+        }
+        .alert-info {
+            background-color: #000033;
+            color: #33ccff;
+            border-color: #33ccff;
+        }
+        .alert-warning {
+            background-color: #333300;
+            color: #ffff33;
+            border-color: #ffff33;
+        }
+    </style>
 </head>
 <body>
     <div class="container">
@@ -15,7 +152,7 @@
             {% if messages %}
                 <div class="flash-messages">
                     {% for category, message in messages %}
-                        <div class="alert alert-{{ category }}">{{ message }}</div>
+                        <div class="alert alert-{{ category }}">{{ message | safe }}</div>
                     {% endfor %}
                 </div>
             {% endif %}
@@ -24,13 +161,13 @@
         <form action="/host" method="post" enctype="multipart/form-data" class="host-form">
             <div class="form-group">
                 <label for="project_name">Project Name:</label>
-                <input type="text" id="project_name" name="project_name" required placeholder="e.g., my-simple-website">
+                <input type="text" id="project_name" name="project_name" required placeholder="e.g., my-synthwave-site">
             </div>
 
             <div class="form-group">
                 <label for="project_files">Select Project Files:</label>
                 <input type="file" id="project_files" name="project_files" multiple required>
-                <small>Select all files for your project (HTML, CSS, JS, etc.).</small>
+                <small>Select all files for your project (HTML, CSS, JS, images, etc.).</small>
             </div>
 
             <div class="form-group">
@@ -42,13 +179,13 @@
             <div class="form-group">
                 <label for="build_command">Build Command:</label>
                 <input type="text" id="build_command" name="build_command" required placeholder="e.g., npm run build or cp index.html public/">
-                <small>Command to build your project (e.g., compile code, move files).</small>
+                <small>Command to build your project (e.g., compile code, move files to root for serving).</small>
             </div>
 
             <div class="form-group">
-                <label for="start_command">Start Command:</label>
-                <input type="text" id="start_command" name="start_command" required placeholder="e.g., python app.py or node server.js or serve -p 8080">
-                <small>Command to start your web server or application.</small>
+                <label for="start_command">Start Command (Optional):</label>
+                <input type="text" id="start_command" name="start_command" placeholder="e.g., node server.js or gunicorn app:app -b 0.0.0.0:8000">
+                <small>Command to start a separate server/backend for your project (if needed).</small>
             </div>
 
             <button type="submit" class="button submit-button">Deploy Project</button>
