@@ -1,252 +1,350 @@
-Here's a `README.md` for your Flask application and DNS setup, suitable for sharing or as a personal reference.
+Local Web Application with Flask, Gunicorn, and Custom DNS
+This project demonstrates how to host a Flask web application on a local network PC (Linux or Windows) using Gunicorn (on Linux) or Waitress (on Windows) for production serving and Dnsmasq (on Linux) or Acrylic DNS Proxy (on Windows) for custom local domain resolution. This allows devices on your home network to access your app using a friendly domain name like apps.dhruv instead of an IP address.
 
------
+Features ✨
+Custom Local Domain: Access http://apps.dhruv:5000 from any device on your local network.
 
-# Local Web Application with Flask, Gunicorn, and Dnsmasq
+Production-Ready Server: Uses Gunicorn (Linux) or Waitress (Windows) for reliable and performant serving.
 
-This project demonstrates how to host a Flask web application on a local network PC (e.g., a Chromebook's Linux container, Raspberry Pi, or any Linux machine) using **Gunicorn** for production serving and **Dnsmasq** for custom local domain resolution. This allows devices on your home network to access your app using a friendly domain name like `apps.dhruv` instead of an IP address.
+Virtual Environment: Isolates Python dependencies for clean development.
 
-## Features ✨
+Systemd Service / NSSM: (Optional, but recommended for persistent hosting) Ensures the Flask app starts automatically on boot and runs in the background.
 
-  * **Custom Local Domain:** Access `http://apps.dhruv:5000` from any device on your local network.
-  * **Production-Ready Server:** Uses Gunicorn for reliable and performant serving of the Flask application.
-  * **Virtual Environment:** Isolates Python dependencies for clean development.
-  * **Systemd Service:** (Optional, but recommended for persistent hosting) Ensures the Flask app starts automatically on boot and runs in the background.
+Prerequisites 📋
+A Linux PC (e.g., Chromebook's Linux container, Raspberry Pi, Ubuntu machine) OR a Windows PC.
 
-## Prerequisites 📋
+Your Flask application code (e.g., app.py).
 
-  * A Linux PC (e.g., Chromebook's Linux container, Raspberry Pi, Ubuntu machine).
-  * **Your Flask application code** (e.g., `app.py`).
-  * Basic understanding of the Linux command line.
-  * Access to your home Wi-Fi router settings (for viewing PC's IP and configuring client DNS).
+Basic understanding of the command line for your OS.
 
-\<hr/\>
+Access to your home Wi-Fi router settings (for viewing PC's IP and configuring client DNS).
 
-## Setup Steps 🚀
+Setup Steps 🚀
+Follow the instructions relevant to your operating system.
 
-Follow these steps on your Linux PC.
+1. Initial Setup & Dependencies
+On Linux (Ubuntu/Debian-based, including Crostini)
+Update System & Install Essentials:
 
-### 1\. Initial Setup & Dependencies
+Bash
 
-1.  **Update System & Install Essentials:**
+sudo apt update
+sudo apt upgrade -y
+sudo apt install python3 python3-pip dnsmasq git -y
+On Windows
+Install Python: Download and install Python 3.x from python.org. During installation, make sure to check "Add Python to PATH".
 
-    ```bash
-    sudo apt update
-    sudo apt upgrade -y
-    sudo apt install python3 python3-pip dnsmasq git -y
-    ```
+Install Git: Download and install Git from git-scm.com. This will also provide Git Bash, a useful terminal.
 
-2.  **Clone Your Flask App (or copy files):**
+Open a Command Prompt or PowerShell (or Git Bash).
 
-    ```bash
-    # Example for cloning from Git
-    git clone your_repo_url /home/dhruv/webapp/appsox
-    cd /home/dhruv/webapp/appsox
-    ```
+Common Steps (Linux & Windows)
+Clone Your Flask App (or copy files):
 
-    Make sure you navigate to the directory containing your `app.py` file.
+Bash
 
-3.  **Create & Activate Virtual Environment:**
+# Example for cloning from Git. Adjust path as needed.
+# Linux:
+git clone your_repo_url /home/dhruv/webapp/appsox
+cd /home/dhruv/webapp/appsox
+# Windows (e.g., in PowerShell or CMD):
+git clone your_repo_url C:\Users\YourUser\webapp\appsox
+cd C:\Users\YourUser\webapp\appsox
+Make sure you navigate to the directory containing your app.py file.
 
-    ```bash
-    python3 -m venv venv
-    source venv/bin/activate
-    ```
+Create & Activate Virtual Environment:
 
-    Your terminal prompt should now show `(venv)` at the beginning.
+Bash
 
-4.  **Install Python Dependencies:**
+# Linux:
+python3 -m venv venv
+source venv/bin/activate
+# Windows (in CMD):
+py -m venv venv
+.\venv\Scripts\activate.bat
+# Windows (in PowerShell):
+py -m venv venv
+.\venv\Scripts\Activate.ps1
+Your terminal prompt should now show (venv) at the beginning.
 
-    ```bash
-    pip install flask gunicorn
-    # Install any other dependencies your app requires
-    # pip install -r requirements.txt
-    ```
+Install Python Dependencies:
 
-\<hr/\>
+Bash
 
-### 2\. Configure Dnsmasq (Local DNS Server)
+pip install flask
+# Linux:
+pip install gunicorn
+# Windows:
+pip install waitress
+# Install any other dependencies your app requires (e.g., from a requirements.txt)
+# pip install -r requirements.txt
+2. Configure Local DNS Server
+This allows apps.dhruv to resolve to your PC's IP address.
 
-This allows `apps.dhruv` to resolve to your PC's IP address.
+Get Your PC's Local IP Address:
+This is the IP address of your hosting PC on your local network.
 
-1.  **Get Your PC's Local IP Address:**
+Bash
 
-    ```bash
-    ip a
-    ```
+# Linux:
+ip a
+# Windows (in CMD or PowerShell):
+ipconfig
+Look for the IPv4 Address under your active network adapter (e.g., Wi-Fi or Ethernet). Let's assume it's 192.168.1.100 for this example. This IP is crucial.
 
-    Look for the `inet` address under your primary network interface (e.g., `eth0` in Crostini, `wlan0` or `eth0` on a Pi). Let's assume it's `100.115.92.203` (Chromebook Linux) or `192.168.1.100` (typical LAN IP) for this example. This IP is crucial.
+On Linux (Dnsmasq)
+Create dnsmasq Custom Configuration:
 
-2.  **Create `dnsmasq` Custom Configuration:**
+Bash
 
-    ```bash
-    sudo nano /etc/dnsmasq.d/mywebapp.conf
-    ```
+sudo nano /etc/dnsmasq.d/mywebapp.conf
+Add this single line, replacing YOUR_PC_IP with the actual IP address of your Linux PC:
 
-    Add this single line, replacing `YOUR_PC_IP` with the IP address you found in the previous step:
+address=/apps.dhruv/YOUR_PC_IP
+Save and exit (Ctrl + O, Enter, Ctrl + X).
 
-    ```
-    address=/apps.dhruv/YOUR_PC_IP
-    ```
+Configure dnsmasq for Upstream DNS (Crucial for Internet Access):
 
-    Save and exit (`Ctrl + O`, `Enter`, `Ctrl + X`).
+Bash
 
-3.  **Configure `dnsmasq` for Upstream DNS (Crucial for Internet Access):**
-    This tells `dnsmasq` where to forward requests for domains it doesn't handle.
+sudo nano /etc/dnsmasq.conf
+Ensure these lines are present and uncommented (remove # if it's there):
 
-    ```bash
-    sudo nano /etc/dnsmasq.conf
-    ```
+no-resolv  # Prevents dnsmasq from using /etc/resolv.conf for its upstream servers
+server=8.8.8.8 # Google Public DNS (Primary)
+server=8.8.4.4 # Google Public DNS (Secondary for redundancy)
+Save and exit.
 
-    Ensure these lines are present and uncommented (remove `#` if it's there):
+Configure Systemd-Networkd (for Chromebook Linux/Crostini only):
 
-    ```
-    no-resolv  # Prevents dnsmasq from using /etc/resolv.conf for its upstream servers
-    server=8.8.8.8 # Google Public DNS (Primary)
-    server=8.8.4.4 # Google Public DNS (Secondary for redundancy)
-    ```
+Bash
 
-    Save and exit.
+sudo nano /etc/systemd/network/10-eth0.network
+Ensure the [Network] section includes these DNS lines:
 
-4.  **Configure Systemd-Networkd (for Chromebook Linux/Crostini):**
-    If on a Chromebook Linux container, ensure your `eth0` is configured to use both local and public DNS.
+Ini, TOML
 
-    ```bash
-    sudo nano /etc/systemd/network/10-eth0.network
-    ```
+[Match]
+Name=eth0
 
-    Ensure the `[Network]` section includes these DNS lines:
+[Network]
+DHCP=yes
+DNS=127.0.0.1  # Points to your local dnsmasq
+DNS=8.8.8.8    # Points to a public DNS for internet
+Save and exit.
 
-    ```ini
-    [Match]
-    Name=eth0
+Restart Network Services:
 
-    [Network]
-    DHCP=yes
-    DNS=127.0.0.1  # Points to your local dnsmasq
-    DNS=8.8.8.8    # Points to a public DNS for internet
-    ```
+Bash
 
-    Save and exit.
+sudo systemctl restart systemd-networkd.service # On Crostini only
+sudo systemctl restart dnsmasq.service
+Check dnsmasq status: sudo systemctl status dnsmasq.service. It should be active (running).
 
-5.  **Restart Network Services:**
+On Windows (Acrylic DNS Proxy)
+Download Acrylic DNS Proxy:
+Go to acrylic.codeplex.com (Acrylic's original site is archived; search for "Acrylic DNS Proxy" to find a reliable download source like Softpedia or similar).
 
-    ```bash
-    sudo systemctl restart systemd-networkd.service # On Crostini
-    sudo systemctl restart dnsmasq.service
-    ```
+Install Acrylic: Follow the installer's instructions. It typically installs to C:\Program Files (x86)\Acrylic DNS Proxy.
 
-    Check `dnsmasq` status:
+Configure Acrylic Custom Host:
 
-    ```bash
-    sudo systemctl status dnsmasq.service
-    ```
+Navigate to the Acrylic installation directory.
 
-    It should show `active (running)`.
+Open AcrylicHosts.txt in Notepad as Administrator.
 
-\<hr/\>
+Right-click notepad.exe in Start Menu > More > Run as administrator.
 
-### 3\. Run Your Flask App with Gunicorn
+File > Open... and browse to C:\Program Files (x86)\Acrylic DNS Proxy\AcrylicHosts.txt.
 
-This makes your app accessible on the network.
+Add the following line, replacing YOUR_PC_IP with your actual Windows PC's IP address:
 
-1.  **Navigate to Your App Directory:**
-    Ensure you are in the directory containing `app.py`:
+YOUR_PC_IP apps.dhruv
+Example: 192.168.1.100 apps.dhruv
 
-    ```bash
-    cd /home/dhruv/webapp/appsox
-    ```
+Save and close the file.
 
-2.  **Ensure Virtual Environment is Active:**
+Configure Acrylic DNS Settings:
 
-    ```bash
-    source venv/bin/activate
-    ```
+Open AcrylicConfiguration.ini in Notepad as Administrator.
 
-    Confirm `(venv)` is in your prompt.
+Find the [GlobalSection] section.
 
-3.  **Start Gunicorn:**
+Ensure PrimaryServerAddress and SecondaryServerAddress are set to public DNS servers (e.g., Google DNS):
 
-    ```bash
-    gunicorn --bind 0.0.0.0:5000 app:app
-    ```
+Ini, TOML
 
-      * Replace `app:app` if your Flask application instance is named differently (e.g., `app:create_app()` if it's a factory function, or `my_app:application` if your file is `my_app.py` and instance is `application`).
+PrimaryServerAddress=8.8.8.8
+SecondaryServerAddress=8.8.4.4
+Save and close the file.
 
-    Your app should now be listening. Keep this terminal open, or proceed to the next step to run it as a service.
+Restart Acrylic Service:
 
-\<hr/\>
+Open Services (search for "Services" in the Start Menu).
 
-### 4\. (Optional) Run Flask App as a Systemd Service
+Find "Acrylic DNS Proxy Service".
 
+Right-click it and select Restart.
+
+Ensure its status is "Running".
+
+Configure Windows Network Adapter to Use Acrylic:
+
+Go to Control Panel > Network and Sharing Center > Change adapter settings.
+
+Right-click your active network adapter (e.g., Wi-Fi, Ethernet) and choose Properties.
+
+Select "Internet Protocol Version 4 (TCP/IPv4)" and click Properties.
+
+Select "Use the following DNS server addresses".
+
+Set Preferred DNS server to 127.0.0.1. This makes your Windows PC use Acrylic as its DNS server.
+
+Set Alternate DNS server to 8.8.8.8 (optional, Acrylic can handle upstream, but for redundancy).
+
+Click OK on both windows.
+
+Disable and Re-enable your network adapter (right-click adapter > Disable, then right-click > Enable) to apply changes.
+
+3. Run Your Flask App
+On Linux (Gunicorn)
+Navigate to Your App Directory:
+
+Bash
+
+cd /home/dhruv/webapp/appsox
+Ensure Virtual Environment is Active:
+
+Bash
+
+source venv/bin/activate
+Confirm (venv) is in your prompt.
+
+Start Gunicorn:
+
+Bash
+
+gunicorn --bind 0.0.0.0:5000 app:app
+Replace app:app if your Flask application instance is named differently.
+
+On Windows (Waitress)
+Navigate to Your App Directory:
+
+DOS
+
+cd C:\Users\YourUser\webapp\appsox
+Ensure Virtual Environment is Active:
+
+DOS
+
+.\venv\Scripts\activate.bat  # Or .\venv\Scripts\Activate.ps1 for PowerShell
+Confirm (venv) is in your prompt.
+
+Start Waitress:
+
+DOS
+
+waitress-serve --host=0.0.0.0 --port=5000 app:app
+Replace app:app if your Flask application instance is named differently.
+
+4. (Optional) Run Flask App as a Service
 For reliable, automatic startup and background running.
 
-1.  **Create a Service File:**
+On Linux (Systemd Service)
+Create a Service File:
 
-    ```bash
-    sudo nano /etc/systemd/system/mywebapp.service
-    ```
+Bash
 
-    Paste the following, **adjusting paths** to your `appsox` directory and `User`/`Group` as needed.
+sudo nano /etc/systemd/system/mywebapp.service
+Paste the following, adjusting paths to your appsox directory and User/Group as needed.
 
-    ```ini
-    [Unit]
-    Description=Gunicorn instance to serve mywebapp
-    After=network.target
+Ini, TOML
 
-    [Service]
-    User=dhruv # Your Linux username
-    Group=www-data # Or your username's group, e.g., dhruv
-    WorkingDirectory=/home/dhruv/webapp/appsox # Path to your appsox directory
-    ExecStart=/home/dhruv/webapp/appsox/venv/bin/gunicorn --workers 3 --bind 0.0.0.0:5000 app:app
-    Restart=always
+[Unit]
+Description=Gunicorn instance to serve mywebapp
+After=network.target
 
-    [Install]
-    WantedBy=multi-user.target
-    ```
+[Service]
+User=dhruv # Your Linux username
+Group=www-data # Or your username's group, e.g., dhruv
+WorkingDirectory=/home/dhruv/webapp/appsox # Path to your appsox directory
+ExecStart=/home/dhruv/webapp/appsox/venv/bin/gunicorn --workers 3 --bind 0.0.0.0:5000 app:app
+Restart=always
 
-    Save and exit.
+[Install]
+WantedBy=multi-user.target
+Save and exit.
 
-2.  **Enable and Start the Service:**
+Enable and Start the Service:
 
-    ```bash
-    sudo systemctl daemon-reload
-    sudo systemctl enable mywebapp.service
-    sudo systemctl start mywebapp.service
-    ```
+Bash
 
-3.  **Check Service Status:**
+sudo systemctl daemon-reload
+sudo systemctl enable mywebapp.service
+sudo systemctl start mywebapp.service
+Check Service Status:
 
-    ```bash
-    sudo systemctl status mywebapp.service
-    ```
+Bash
 
-    It should be `active (running)`.
+sudo systemctl status mywebapp.service
+It should be active (running).
 
-\<hr/\>
+On Windows (NSSM - Non-Sucking Service Manager)
+NSSM is a popular tool to run any executable as a Windows service.
 
-## 5\. Configure Client Devices 📱
+Download NSSM:
+Download the latest stable release from nssm.cc. Extract it to a permanent location (e.g., C:\nssm).
 
+Install the Service:
+Open an elevated Command Prompt (Run as Administrator).
+
+DOS
+
+cd C:\nssm\win64  # Or win32 depending on your system
+nssm install MyWebAppService
+A GUI window will pop up:
+
+Path: Browse to your venv\Scripts\waitress-serve.exe (e.g., C:\Users\YourUser\webapp\appsox\venv\Scripts\waitress-serve.exe).
+
+Arguments: --host=0.0.0.0 --port=5000 app:app (adjust app:app as needed).
+
+Details Tab: (Optional) Set Display name (e.g., "My Web App Flask Server").
+
+Dependencies Tab: (Optional) Add "Acrylic DNS Proxy Service" if you want it to start after Acrylic.
+
+Click "Install Service".
+
+Start the Service:
+
+DOS
+
+net start MyWebAppService
+You can also manage it from the Windows Services console.
+
+5. Configure Client Devices 📱
 For other devices on your local network (e.g., your phone, another laptop) to use your custom domain:
 
-1.  **Get Your PC's IP Address (again):** Confirm the IP address of the Linux PC hosting your app (e.g., `100.115.92.203` or `192.168.1.100`).
+Get Your PC's IP Address (again): Confirm the IP address of the Linux/Windows PC hosting your app (e.g., 100.115.92.203 or 192.168.1.100).
 
-2.  **On the Client Device:**
+On the Client Device:
 
-      * Go to **Wi-Fi settings**.
-      * Tap on your **connected Wi-Fi network**.
-      * Find **IP Settings** or **DNS settings** and change it to **Static** or **Manual**.
-      * Set **DNS 1** to your Linux PC's IP address (e.g., `100.115.92.203`).
-      * Set **DNS 2** to a public DNS server like `8.8.8.8` or `1.1.1.1` (as a fallback for regular internet Browse).
-      * **Save** the settings.
-      * **Toggle Wi-Fi off and then on** to apply the changes.
+Go to Wi-Fi settings.
 
-\<hr/\>
+Tap on your connected Wi-Fi network.
 
-## Access Your Application 🎉
+Find IP Settings or DNS settings and change it to Static or Manual.
 
+Set DNS 1 to your Linux/Windows PC's IP address (e.g., 192.168.1.100).
+
+Set DNS 2 to a public DNS server like 8.8.8.8 or 1.1.1.1 (as a fallback for regular internet Browse).
+
+Save the settings.
+
+Toggle Wi-Fi off and then on to apply the changes.
+
+Access Your Application 🎉
 Now, from the client device you configured, open a web browser and navigate to:
 
-`http://apps.dhruv:5000`
+http://apps.dhruv:5000
 
-You should see your Flask application\!
+You should see your Flask application!
