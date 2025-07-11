@@ -1,10 +1,10 @@
 import os
 import subprocess
 import sqlite3
-from flask import Flask, render_template, request, redirect, url_for, flash
+from flask import Flask, render_template, request, redirect, url_for, flash, send_from_directory
 
 app = Flask(__name__)
-app.secret_key = 'your_strong_random_secret_key_here' # !! IMPORTANT: CHANGE THIS TO A REAL, STRONG KEY !!
+app.secret_key = 'your_strong_random_secret_key_here_seriously_change_this' # !! IMPORTANT: CHANGE THIS TO A REAL, STRONG KEY !!
 app.config['UPLOAD_FOLDER'] = 'uploads'
 app.config['PROJECTS_FOLDER'] = 'projects'
 app.config['DATABASE'] = 'database.db'
@@ -36,7 +36,7 @@ def init_db():
                 url TEXT NOT NULL,
                 pre_build_command TEXT,
                 build_command TEXT NOT NULL,
-                start_command TEXT NOT NULL,
+                start_command TEXT, -- Start command is now optional as Flask serves it
                 deployed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
         ''')
@@ -52,9 +52,8 @@ with app.app_context():
 @app.route('/')
 def index():
     db = get_db()
-    # Fetch all projects from the database
     projects_cursor = db.execute('SELECT * FROM projects ORDER BY deployed_at DESC').fetchall()
-    projects = [dict(row) for row in projects_cursor] # Convert Row objects to dictionaries
+    projects = [dict(row) for row in projects_cursor]
     db.close()
     return render_template('index.html', projects=projects)
 
@@ -64,14 +63,13 @@ def host_project():
         project_name = request.form['project_name'].strip()
         pre_build_command = request.form.get('pre_build_command', '').strip()
         build_command = request.form['build_command'].strip()
-        start_command = request.form['start_command'].strip()
+        start_command = request.form.get('start_command', '').strip() # Make start_command optional
 
-        if not project_name or not build_command or not start_command:
-            flash('Project Name, Build Command, and Start Command are required!', 'error')
+        if not project_name or not build_command:
+            flash('Project Name and Build Command are required!', 'error')
             return redirect(request.url)
 
         db = get_db()
-        # Check if project name already exists in DB
         existing_project = db.execute('SELECT id FROM projects WHERE name = ?', (project_name,)).fetchone()
         if existing_project:
             db.close()
@@ -102,24 +100,34 @@ def host_project():
             # Execute pre-build command if provided
             if pre_build_command:
                 flash(f'Running pre-build command: {pre_build_command}', 'info')
-                subprocess.run(pre_build_command, shell=True, check=True, cwd=project_path, capture_output=True, text=True) # Added capture_output
-                # You might want to log or display output/errors from subprocess runs
+                process = subprocess.run(pre_build_command, shell=True, check=True, cwd=project_path, capture_output=True, text=True)
+                flash(f'Pre-build output: {process.stdout}', 'info')
+                if process.stderr:
+                    flash(f'Pre-build errors: {process.stderr}', 'warning')
+
 
             # Execute build command
             flash(f'Running build command: {build_command}', 'info')
-            subprocess.run(build_command, shell=True, check=True, cwd=project_path, capture_output=True, text=True)
+            process = subprocess.run(build_command, shell=True, check=True, cwd=project_path, capture_output=True, text=True)
+            flash(f'Build output: {process.stdout}', 'info')
+            if process.stderr:
+                flash(f'Build errors: {process.stderr}', 'warning')
 
-            # Execute start command (this will run in the background)
-            flash(f'Running start command: {start_command}', 'info')
-            # Using subprocess.Popen allows the command to run in the background.
-            # In a production setup, you'd use a robust process manager like systemd, pm2, or gunicorn.
-            subprocess.Popen(start_command, shell=True, cwd=project_path)
 
-            # Construct a hypothetical URL for the project
-            # This URL assumes your project is accessible on a specific port from your Chromebook's IP
-            # YOU WILL NEED TO REPLACE 'YOUR_CHROMBOOK_IP_OR_DOMAIN' and 'YOUR_PROJECT_PORT'
-            # The 'start_command' should ensure your project starts a server on 'YOUR_PROJECT_PORT'
-            project_url = f"http://YOUR_CHROMBOOK_IP_OR_DOMAIN:YOUR_PROJECT_PORT/{project_name}/" # Example
+            # If a start command is provided, execute it in the background
+            # This is useful for backend services or complex apps that need their own server
+            if start_command:
+                flash(f'Running start command: {start_command} (in background)', 'info')
+                # Use a specific port for the project if it's a separate server
+                # Note: This is an unmanaged background process. For real deployment, use systemd/pm2.
+                subprocess.Popen(start_command, shell=True, cwd=project_path)
+
+
+            # The URL for path-based serving
+            # This URL will be served by the Flask app itself
+            # The 'host' parameter in app.run determines the IP (e.g., 127.0.0.1 or 0.0.0.0)
+            project_url = f"http://{request.host}/{project_name}/"
+
 
             # Insert project info into the database
             db.execute(
@@ -133,12 +141,11 @@ def host_project():
             return redirect(url_for('index'))
 
         except subprocess.CalledProcessError as e:
-            db.close() # Close DB connection before potential rmtree
-            # Clean up partially deployed project if commands fail
+            db.close()
             import shutil
             if os.path.exists(project_path):
                 shutil.rmtree(project_path)
-            flash(f'Command failed for {e.cmd}: {e.stderr}', 'error') # Display stderr for more info
+            flash(f'Command failed for {e.cmd}:\nSTDOUT: {e.stdout}\nSTDERR: {e.stderr}', 'error')
             return redirect(request.url)
         except Exception as e:
             db.close()
@@ -150,10 +157,53 @@ def host_project():
     db.close() # Close DB connection for GET requests too
     return render_template('host.html')
 
+# NEW ROUTE: Serve static files for each project from its unique path
+@app.route('/<project_name>/<path:filename>')
+def serve_project_files(project_name, filename):
+    db = get_db()
+    project = db.execute('SELECT path FROM projects WHERE name = ?', (project_name,)).fetchone()
+    db.close()
+
+    if project:
+        project_root_path = project['path']
+        # Ensure the filename is within the project's directory to prevent directory traversal attacks
+        # This is a minimal security measure; a full solution would use send_from_directory carefully.
+        try:
+            return send_from_directory(project_root_path, filename)
+        except Exception as e:
+            # Handle cases where file is not found or other errors
+            app.logger.error(f"Error serving file {filename} from {project_root_path}: {e}")
+            return "File not found or access denied.", 404
+    else:
+        return "Project not found.", 404
+
+# A route for the root of the project path (e.g., /my-project-name/)
+@app.route('/<project_name>/')
+def serve_project_root(project_name):
+    db = get_db()
+    project = db.execute('SELECT path FROM projects WHERE name = ?', (project_name,)).fetchone()
+    db.close()
+
+    if project:
+        project_root_path = project['path']
+        # Attempt to serve index.html by default for the root URL
+        try:
+            return send_from_directory(project_root_path, 'index.html')
+        except FileNotFoundError:
+            # If index.html doesn't exist, try to serve a directory listing (though send_from_directory typically doesn't do this by default)
+            # Or you might want to show a custom error page
+            return "Index file not found in project root.", 404
+        except Exception as e:
+            app.logger.error(f"Error serving project root for {project_name}: {e}")
+            return "Error serving project.", 500
+    else:
+        return "Project not found.", 404
+
+
 if __name__ == '__main__':
     # Initialize the database when the app starts
     init_db()
     # To make it accessible from other devices on your LAN:
     # app.run(debug=True, host='0.0.0.0', port=5000)
-    # Make sure to adjust 'YOUR_CHROMBOOK_IP_OR_DOMAIN' and 'YOUR_PROJECT_PORT' above in project_url
-    app.run(debug=True) # Runs on http://127.0.0.1:5000 by default
+    # The default port is 5000. All projects will be served on this port.
+    app.run(debug=True)
