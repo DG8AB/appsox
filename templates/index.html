@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Hosted Websites</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>My Hosted Websites ✨</h1>
+        <a href="/host" class="button primary-button">Host New Project</a>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="flash-messages">
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }}">{{ message }}</div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+
+        {% if projects %}
+            <ul class="project-list">
+                {% for name, details in projects.items() %}
+                    <li>
+                        <h3>{{ name }}</h3>
+                        <p><strong>Path:</strong> {{ details.path }}</p>
+                        <p><strong>URL:</strong> <a href="{{ details.url }}" target="_blank">{{ details.url }}</a></p>
+                    </li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p>No projects hosted yet. Go to <a href="/host">Host New Project</a> to get started!</p>
+        {% endif %}
+    </div>
+</body>
+</html>
